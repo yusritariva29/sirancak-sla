@@ -1,0 +1,80 @@
+// ==========================================
+// FILE: FormA.gs
+// KHUSUS UNTUK BACKEND FUNGSI FORM A
+// ==========================================
+
+function getFormA() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('FormA');
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  var list = [];
+  
+  // Asumsi baris 1 adalah header, mulai dari i = 1
+  for (var i = 1; i < data.length; i++) {
+    list.push({
+      id: data[i][0],
+      tanggal: data[i][1] ? Utilities.formatDate(new Date(data[i][1]), Session.getScriptTimeZone(), "yyyy-MM-dd") : "",
+      no_form_a: data[i][2],
+      pengawas: data[i][3],
+      tahapan: data[i][4],
+      uraian_pengawasan: data[i][5],
+      ada_dugaan: data[i][6],
+      file_url: data[i][7] || "#",
+      pembuat: data[i][8] || "-"
+    });
+  }
+  return list;
+}
+
+function addFormA(form) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('FormA');
+  if(!sheet) return "Error: Sheet 'FormA' tidak ditemukan!";
+  
+  var id = 'FMA-' + new Date().getTime();
+  sheet.appendRow([
+    id, 
+    form.tanggal, 
+    form.no_form_a, 
+    form.pengawas, 
+    form.tahapan, 
+    form.uraian, 
+    form.ada_dugaan, 
+    form.file_url, 
+    form.pembuat
+  ]);
+  return "Form A berhasil diregistrasi!";
+}
+
+function updateFormA(form) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('FormA');
+  if(!sheet) return "Error: Sheet 'FormA' tidak ditemukan!";
+  
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] == form.id) {
+      sheet.getRange(i + 1, 2).setValue(form.tanggal);
+      sheet.getRange(i + 1, 3).setValue(form.no_form_a);
+      sheet.getRange(i + 1, 4).setValue(form.pengawas);
+      sheet.getRange(i + 1, 5).setValue(form.tahapan);
+      sheet.getRange(i + 1, 6).setValue(form.uraian);
+      sheet.getRange(i + 1, 7).setValue(form.ada_dugaan);
+      sheet.getRange(i + 1, 8).setValue(form.file_url);
+      return "Form A berhasil diperbarui!";
+    }
+  }
+  return "Data Form A tidak ditemukan!";
+}
+
+function deleteFormA(id) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('FormA');
+  if(!sheet) return "Error: Sheet 'FormA' tidak ditemukan!";
+  
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] == id) {
+      sheet.deleteRow(i + 1);
+      return "Form A berhasil dihapus!";
+    }
+  }
+  return "Data Form A tidak ditemukan!";
+}

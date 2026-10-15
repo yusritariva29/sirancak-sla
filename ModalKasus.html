@@ -1,0 +1,253 @@
+<!-- MODAL INPUT KASUS B.1 & B.3 -->
+<div id="modalLaporan" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50 overflow-y-auto">
+    <div class="bg-white rounded-xl max-w-3xl w-full p-6 shadow-xl text-xs max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4 border-b pb-2">
+            <h3 class="font-bold text-sm text-slate-800 uppercase" id="modalTitle"><i class="fa-solid fa-file-lines text-purple-600 mr-1"></i> Form Input Laporan Dugaan Pelanggaran</h3>
+            <button type="button" onclick="closeModalLaporan()" class="text-slate-400 hover:text-slate-600 text-sm"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form onsubmit="submitLaporanPelanggaran(event)" class="space-y-4">
+            <input type="hidden" id="editKasusId">
+            
+            <div class="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                <label class="block font-bold text-amber-900 uppercase mb-1">Nomor Formulir / No. Laporan <span class="text-rose-600">*</span></label>
+                <input type="text" id="customNoLaporan" required placeholder="Contoh: 01/LP/PL/KAB/01.01/IV/2026" class="w-full border rounded p-2 bg-white">
+            </div>
+
+            <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
+                <h4 class="font-bold text-emerald-900 uppercase mb-2">Metadata Penerima Laporan</h4>
+                <input type="text" id="penerimaLaporan" required placeholder="Nama Staf Penerima Laporan" value="Muhammad Ramadhan" class="w-full border rounded p-2 bg-white">
+            </div>
+
+            <div class="bg-slate-50 p-3 rounded-lg border">
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="font-bold text-slate-700 uppercase">1. Identitas Pelapor</h4>
+                    <button type="button" onclick="tambahPelapor()" class="bg-emerald-600 text-white px-2.5 py-1 rounded text-[11px] font-semibold"><i class="fa-solid fa-plus"></i> Tambah Pelapor</button>
+                </div>
+                <div id="pelaporContainer" class="space-y-3"></div>
+            </div>
+
+            <div class="bg-slate-50 p-3 rounded-lg border">
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="font-bold text-slate-700 uppercase">2. Identitas Terlapor</h4>
+                    <button type="button" onclick="tambahTerlapor()" class="bg-emerald-600 text-white px-2.5 py-1 rounded text-[11px] font-semibold"><i class="fa-solid fa-plus"></i> Tambah Terlapor</button>
+                </div>
+                <div id="terlaporContainer" class="space-y-3"></div>
+            </div>
+
+            <div class="bg-slate-50 p-3 rounded-lg border">
+                <h4 class="font-bold text-slate-700 uppercase mb-2">3. Peristiwa yang Dilaporkan</h4>
+                <div class="space-y-2">
+                    <input type="text" id="evPeristiwa" required placeholder="Peristiwa (Bentuk dugaan pelanggaran)" class="w-full border rounded p-2">
+                    <div class="grid grid-cols-3 gap-2">
+                        <input type="text" id="evTempat" required placeholder="Tempat Kejadian" class="border rounded p-2">
+                        <input type="text" id="evTglKejadian" required placeholder="Hari & Tanggal Kejadian" class="border rounded p-2">
+                        <input type="text" id="evTglDiketahui" required placeholder="Hari & Tanggal Diketahui" class="border rounded p-2">
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 p-3 rounded-lg border">
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="font-bold text-slate-700 uppercase">4. Saksi – Saksi</h4>
+                    <button type="button" onclick="tambahSaksi()" class="bg-emerald-600 text-white px-2.5 py-1 rounded text-[11px] font-semibold"><i class="fa-solid fa-plus"></i> Tambah Saksi</button>
+                </div>
+                <div id="saksiContainer" class="space-y-3"></div>
+            </div>
+
+            <div>
+                <label class="block font-semibold uppercase text-slate-600 mb-1">Bukti - Bukti</label>
+                <textarea id="evBukti" rows="2" placeholder="Daftar bukti yang dilampirkan..." class="w-full border rounded p-2"></textarea>
+            </div>
+            
+            <div>
+                <label class="block font-semibold uppercase text-slate-600 mb-1">Uraian Kejadian Secara Lengkap</label>
+                <textarea id="evUraian" rows="5" required placeholder="Uraian kronologis kejadian secara detail..." class="w-full border rounded p-2"></textarea>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-2 border-t">
+                <button type="button" onclick="closeModalLaporan()" class="bg-slate-200 px-3 py-1.5 rounded font-semibold">Batal</button>
+                <button type="submit" class="bg-purple-600 text-white px-3 py-1.5 rounded font-bold">Simpan Laporan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function tambahPelapor(data = null) {
+        const container = document.getElementById('pelaporContainer');
+        const div = document.createElement('div');
+        div.className = 'pelapor-item bg-white p-3 rounded border relative grid grid-cols-2 gap-2 mt-2';
+        div.innerHTML = `
+            <input type="text" required placeholder="Nama Lengkap Pelapor" value="${data?.nama || ''}" class="border rounded p-2 pelapor-nama">
+            <input type="text" required placeholder="Tempat/Tgl Lahir" value="${data?.ttl || ''}" class="border rounded p-2 pelapor-ttl">
+            <input type="text" required placeholder="Jenis Kelamin" value="${data?.jk || ''}" class="border rounded p-2 pelapor-jk">
+            <input type="text" required placeholder="Pekerjaan" value="${data?.pekerjaan || ''}" class="border rounded p-2 pelapor-pekerjaan">
+            <input type="text" required placeholder="Kewarganegaraan" value="${data?.wn || 'Indonesia'}" class="border rounded p-2 pelapor-wn">
+            <input type="text" required placeholder="No. Telp/HP" value="${data?.hp || ''}" class="border rounded p-2 pelapor-hp">
+            <input type="text" required placeholder="Alamat Lengkap" value="${data?.alamat || ''}" class="col-span-2 border rounded p-2 pelapor-alamat">
+            <div class="col-span-2 flex gap-2">
+                <input type="email" required placeholder="E-Mail" value="${data?.email || ''}" class="border rounded p-2 flex-1 pelapor-email">
+                <button type="button" onclick="this.parentElement.parentElement.remove()" class="bg-rose-500 text-white px-2 rounded"><i class="fa-solid fa-trash"></i></button>
+            </div>`;
+        container.appendChild(div);
+    }
+
+    function tambahTerlapor(data = null) {
+        const container = document.getElementById('terlaporContainer');
+        const div = document.createElement('div');
+        div.className = 'terlapor-item bg-white p-3 rounded border grid grid-cols-2 gap-2 mt-2';
+        div.innerHTML = `
+            <input type="text" required placeholder="Nama Terlapor" value="${data?.nama || ''}" class="border rounded p-2 terlapor-nama">
+            <input type="text" placeholder="No. Telp / HP Terlapor" value="${data?.hp || ''}" class="border rounded p-2 terlapor-hp">
+            <div class="col-span-2 flex gap-2">
+                <input type="text" required placeholder="Alamat Terlapor" value="${data?.alamat || ''}" class="border rounded p-2 flex-1 terlapor-alamat">
+                <button type="button" onclick="this.parentElement.parentElement.remove()" class="bg-rose-500 text-white px-2 rounded"><i class="fa-solid fa-trash"></i></button>
+            </div>`;
+        container.appendChild(div);
+    }
+
+    function tambahSaksi(data = null) {
+        const container = document.getElementById('saksiContainer');
+        const div = document.createElement('div');
+        div.className = 'saksi-item bg-white p-3 rounded border grid grid-cols-2 gap-2 mt-2';
+        div.innerHTML = `
+            <input type="text" placeholder="Nama Lengkap Saksi" value="${data?.nama || ''}" class="border rounded p-2 saksi-nama">
+            <input type="text" placeholder="No. Telp / HP Saksi" value="${data?.hp || ''}" class="border rounded p-2 saksi-hp">
+            <div class="col-span-2 flex gap-2">
+                <input type="text" placeholder="Alamat Lengkap Saksi" value="${data?.alamat || ''}" class="border rounded p-2 flex-1 saksi-alamat">
+                <button type="button" onclick="this.parentElement.parentElement.remove()" class="bg-rose-500 text-white px-2 rounded"><i class="fa-solid fa-trash"></i></button>
+            </div>`;
+        container.appendChild(div);
+    }
+
+    function openModalLaporan(mode) {
+        document.getElementById('modalLaporan').classList.remove('hidden');
+        if(mode === 'add') {
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-file-lines text-purple-600 mr-1"></i> Form Input Laporan Dugaan Pelanggaran';
+            document.getElementById('editKasusId').value = '';
+            document.getElementById('customNoLaporan').value = '';
+            document.getElementById('pelaporContainer').innerHTML = '';
+            document.getElementById('terlaporContainer').innerHTML = '';
+            document.getElementById('saksiContainer').innerHTML = '';
+            tambahPelapor();
+            tambahTerlapor();
+            tambahSaksi();
+        }
+    }
+
+    function closeModalLaporan() { 
+        document.getElementById('modalLaporan').classList.add('hidden'); 
+    }
+
+    function editLaporan(id) {
+        const item = cachedKasus.find(d => d.id === id);
+        if(!item) return;
+
+        openModalLaporan('edit');
+        document.getElementById('modalTitle').innerText = "Edit Laporan Dugaan Pelanggaran: " + item.id;
+        document.getElementById('editKasusId').value = item.id;
+        document.getElementById('customNoLaporan').value = item.id;
+        document.getElementById('penerimaLaporan').value = item.penerima_laporan || 'Muhammad Ramadhan';
+        document.getElementById('evPeristiwa').value = item.peristiwa || '';
+        document.getElementById('evTempat').value = item.tempat_kejadian || '';
+        document.getElementById('evTglKejadian').value = item.tgl_kejadian || '';
+        document.getElementById('evTglDiketahui').value = item.tgl_diketahui || '';
+        document.getElementById('evBukti').value = item.bukti || '';
+        document.getElementById('evUraian').value = item.uraian || '';
+
+        document.getElementById('pelaporContainer').innerHTML = '';
+        try { JSON.parse(item.nama_pelapor).forEach(p => tambahPelapor(p)); } catch(e) { tambahPelapor(); }
+        document.getElementById('terlaporContainer').innerHTML = '';
+        try { JSON.parse(item.nama_terlapor).forEach(t => tambahTerlapor(t)); } catch(e) { tambahTerlapor(); }
+        document.getElementById('saksiContainer').innerHTML = '';
+        try {
+            let sList = JSON.parse(item.saksi);
+            if(sList.length > 0) sList.forEach(s => tambahSaksi(s)); else tambahSaksi();
+        } catch(e) { tambahSaksi(); }
+    }
+
+    function submitLaporanPelanggaran(e) {
+        e.preventDefault();
+        const editId = document.getElementById('editKasusId').value;
+        const customId = document.getElementById('customNoLaporan').value;
+
+        let pelaporList = [];
+        document.querySelectorAll('.pelapor-item').forEach(el => {
+            pelaporList.push({
+                nama: el.querySelector('.pelapor-nama').value,
+                ttl: el.querySelector('.pelapor-ttl').value,
+                jk: el.querySelector('.pelapor-jk').value,
+                pekerjaan: el.querySelector('.pelapor-pekerjaan').value,
+                wn: el.querySelector('.pelapor-wn').value,
+                alamat: el.querySelector('.pelapor-alamat').value,
+                hp: el.querySelector('.pelapor-hp').value,
+                email: el.querySelector('.pelapor-email').value
+            });
+        });
+
+        let terlaporList = [];
+        document.querySelectorAll('.terlapor-item').forEach(el => {
+            terlaporList.push({
+                nama: el.querySelector('.terlapor-nama').value,
+                alamat: el.querySelector('.terlapor-alamat').value,
+                hp: el.querySelector('.terlapor-hp').value || '-'
+            });
+        });
+
+        let saksiList = [];
+        document.querySelectorAll('.saksi-item').forEach(el => {
+            let nama = el.querySelector('.saksi-nama').value;
+            if(nama) {
+                saksiList.push({
+                    nama: nama,
+                    alamat: el.querySelector('.saksi-alamat').value || '-',
+                    hp: el.querySelector('.saksi-hp').value || '-'
+                });
+            }
+        });
+
+        const data = {
+            id: customId,
+            old_id: editId,
+            penerima_laporan: document.getElementById('penerimaLaporan').value,
+            nama_pelapor: JSON.stringify(pelaporList),
+            nama_terlapor: JSON.stringify(terlaporList),
+            peristiwa: document.getElementById('evPeristiwa').value,
+            tempat_kejadian: document.getElementById('evTempat').value,
+            tgl_kejadian: document.getElementById('evTglKejadian').value,
+            tgl_diketahui: document.getElementById('evTglDiketahui').value,
+            saksi: JSON.stringify(saksiList),
+            bukti: document.getElementById('evBukti').value,
+            uraian: document.getElementById('evUraian').value,
+            pembuat: currentUser.nama
+        };
+
+        if(editId) {
+            google.script.run.withSuccessHandler(res => { alert(res); closeModalLaporan(); loadDataAll(); }).updateLaporanPelanggaran(data);
+        } else {
+            google.script.run.withSuccessHandler(res => { alert(res); closeModalLaporan(); loadDataAll(); }).addLaporanPelanggaran(data);
+        }
+    }
+
+    function hapusKasus(id) {
+        if(confirm("Apakah Anda yakin ingin menghapus data laporan ini?")) {
+            google.script.run.withSuccessHandler(res => { alert(res); loadDataAll(); }).deleteKasus(id);
+        }
+    }
+
+    function downloadFormB1(id) {
+        alert("Menyiapkan dokumen unduhan Formulir B.1 & B.3...");
+        google.script.run.withSuccessHandler(function(res) {
+            if (res.success) {
+                const a = document.createElement('a');
+                a.href = res.downloadUrl;
+                a.download = res.fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } else {
+                alert("Gagal mengunduh: " + res.message);
+            }
+        }).generateFormB1DirectUrl(id);
+    }
+</script>

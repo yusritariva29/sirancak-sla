@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SI-RANCAK - Sistem Informasi Rekapitulasi & Catatan Kasus</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+
+    <!-- ================= HALAMAN LOGIN ================= -->
+    <div id="loginPage" class="min-h-screen flex items-center justify-center p-4 bg-emerald-950">
+        <div class="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl">
+            <div class="text-center mb-6">
+                <div class="bg-emerald-800 text-white w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 shadow">
+                    <i class="fa-solid fa-scale-balanced text-xl"></i>
+                </div>
+                <h1 class="text-xl font-bold text-slate-800">SI-RANCAK</h1>
+                <p class="text-xs text-slate-500 mt-1">Sistem Informasi Rekapitulasi & Catatan Kasus P3SPH</p>
+            </div>
+            <form onsubmit="handleLogin(event)" class="space-y-4 text-xs">
+                <div>
+                    <label class="block font-semibold uppercase text-slate-600 mb-1">Username / NIP</label>
+                    <input type="text" id="loginUser" required placeholder="Masukkan username..." class="w-full border border-slate-300 rounded-lg p-2.5">
+                </div>
+                <div>
+                    <label class="block font-semibold uppercase text-slate-600 mb-1">Password</label>
+                    <input type="password" id="loginPass" required placeholder="••••••••" class="w-full border border-slate-300 rounded-lg p-2.5">
+                </div>
+                <button type="submit" id="btnLogin" class="w-full bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg transition shadow">Masuk Aplikasi</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= HALAMAN UTAMA APLIKASI ================= -->
+    <div id="appContainer" class="hidden min-h-screen flex flex-col">
+        <nav class="bg-emerald-900 text-white shadow-lg sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-emerald-700 p-2 rounded-lg"><i class="fa-solid fa-shield-halved text-xl text-emerald-200"></i></div>
+                    <div>
+                        <h1 class="text-base font-bold tracking-wide">SI-RANCAK</h1>
+                        <p class="text-xs text-emerald-300" id="userSessionInfo">Login sebagai: -</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <div class="flex space-x-1 bg-emerald-950 p-1 rounded-lg text-xs">
+                        <button onclick="switchTab('formA')" id="tabBtnFormA" class="px-3 py-1.5 font-bold rounded-md bg-white text-emerald-900 shadow">Arsip Form A</button>
+                        <button onclick="switchTab('kasus')" id="tabBtnKasus" class="px-3 py-1.5 font-semibold rounded-md text-emerald-200 hover:text-white">Dashboard Kasus & SLA</button>
+                    </div>
+                    <button onclick="logout()" class="bg-rose-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold"><i class="fa-solid fa-right-from-bracket"></i> Keluar</button>
+                </div>
+            </div>
+        </nav>
+
+        <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full">
+            <!-- VIEW FORM A -->
+            <div id="viewFormA" class="space-y-4">
+                <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <div>
+                        <h2 class="font-bold text-slate-800 text-sm uppercase">Arsip Hasil Pengawasan & SLA Penetapan Temuan (Form A)</h2>
+                        <p class="text-xs text-slate-500">Batas waktu penetapan Temuan paling lama 7 hari kerja sejak Form A dibuat (Perbawaslu).</p>
+                    </div>
+                    <button onclick="openModalFormA('add')" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow"><i class="fa-solid fa-plus"></i> Input Form A</button>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 border-b uppercase">
+                                <th class="p-3">No Form A / Tanggal</th>
+                                <th class="p-3">Pengawas / Pembuat</th>
+                                <th class="p-3">Tahapan & Uraian</th>
+                                <th class="p-3 text-center">SLA Penetapan Temuan (7 Hari)</th>
+                                <th class="p-3 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableFormA" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW KASUS & SLA TIMER (B.1 / B.3) -->
+            <div id="viewKasus" class="space-y-4 hidden">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-4 rounded-xl border-l-4 border-emerald-500 border border-slate-200 shadow-sm">
+                        <p class="text-[11px] text-emerald-600 font-bold uppercase"><i class="fa-solid fa-circle-check"></i> Aman (Kajian Awal / 7 H)</p>
+                        <h3 id="statAman" class="text-2xl font-bold mt-1 text-emerald-900">0</h3>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border-l-4 border-blue-500 border border-slate-200 shadow-sm">
+                        <p class="text-[11px] text-blue-600 font-bold uppercase"><i class="fa-solid fa-circle-info"></i> Siaga (3 Hari Kerja)</p>
+                        <h3 id="statSiaga" class="text-2xl font-bold mt-1 text-blue-900">0</h3>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border-l-4 border-amber-500 border border-slate-200 shadow-sm">
+                        <p class="text-[11px] text-amber-600 font-bold uppercase"><i class="fa-solid fa-triangle-exclamation"></i> Deadline Kajian (2 Hari)</p>
+                        <h3 id="statWaspada" class="text-2xl font-bold mt-1 text-amber-900">0</h3>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border-l-4 border-rose-600 border border-slate-200 shadow-sm">
+                        <p class="text-[11px] text-rose-600 font-bold uppercase"><i class="fa-solid fa-fire text-rose-600 animate-bounce"></i> Bahaya / SLA Lewat</p>
+                        <h3 id="statBahaya" class="text-2xl font-bold mt-1 text-rose-900">0</h3>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <div>
+                        <h2 class="font-bold text-slate-800 text-sm uppercase">Rekapitulasi Penanganan Kasus & SLA Timer</h2>
+                        <p class="text-xs text-slate-500">Kajian awal paling lama 2 hari kerja; total penanganan laporan paling lama 7 hari kerja.</p>
+                    </div>
+                    <button onclick="openModalLaporan('add')" class="bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow"><i class="fa-solid fa-plus"></i> Input Laporan Dugaan Pelanggaran (Model B.1 & B.3)</button>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 border-b uppercase">
+                                <th class="p-3">No. Laporan / Tanggal</th>
+                                <th class="p-3">Sumber / Pelapor</th>
+                                <th class="p-3">Terlapor</th>
+                                <th class="p-3">Peristiwa / Uraian</th>
+                                <th class="p-3 text-center">SLA Kajian Awal & Penanganan</th>
+                                <th class="p-3 text-center">Aksi / Dokumen B.1 & B.3</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableKasus" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ================= MODAL INPUT FORM A ================= -->
+    <div id="modalFormA" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div class="bg-white rounded-xl max-w-2xl w-full p-6 shadow-xl text-xs max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="font-bold text-sm text-slate-800 uppercase" id="titleModalFormA"><i class="fa-solid fa-clipboard-check text-blue-600 mr-1"></i> Input Hasil Pengawasan (Form A)</h3>
+                <button type="button" onclick="closeModalFormA()" class="text-slate-400 hover:text-slate-600 text-sm"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="submitFormA(event)" class="space-y-4">
+                <input type="hidden" id="editFormAId">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-semibold uppercase text-slate-600 mb-1">Nomor Form A <span class="text-rose-600">*</span></label>
+                        <input type="text" id="faNomor" required placeholder="Contoh: 01/LHP/PM/KAB/01.01/IV/2026" class="w-full border rounded p-2 bg-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold uppercase text-slate-600 mb-1">Tanggal Pengawasan <span class="text-rose-600">*</span></label>
+                        <input type="date" id="faTanggal" required class="w-full border rounded p-2 bg-white">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-semibold uppercase text-slate-600 mb-1">Nama Pengawas <span class="text-rose-600">*</span></label>
+                        <input type="text" id="faPengawas" required placeholder="Nama pelaksana pengawasan" class="w-full border rounded p-2 bg-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold uppercase text-slate-600 mb-1">Tahapan yang Diawasi <span class="text-rose-600">*</span></label>
+                        <input type="text" id="faTahapan" required placeholder="Contoh: Pemutakhiran Data Pemilih" class="w-full border rounded p-2 bg-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold uppercase text-slate-600 mb-1">Uraian Hasil Pengawasan <span class="text-rose-600">*</span></label>
+                    <textarea id="faUraian" rows="4" required placeholder="Jelaskan proses dan hasil pengawasan..." class="w-full border rounded p-2 bg-white"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg border">
+                    <div>
+                        <label class="block font-semibold uppercase text-slate-600 mb-1">Dugaan Pelanggaran? <span class="text-rose-600">*</span></label>
+                        <select id="faDugaan" required class="w-full border rounded p-2 bg-white font-semibold text-slate-700">
+                            <option value="Tidak Ada">Tidak Ada Pelanggaran</option>
+                            <option value="Ada">Ada Dugaan Pelanggaran</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold uppercase text-slate-600 mb-1">Link File Form A Fisik (Opsional)</label>
+                        <input type="url" id="faUrl" placeholder="Link Google Drive / PDF..." class="w-full border rounded p-2 bg-white">
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-2 pt-2 border-t">
+                    <button type="button" onclick="closeModalFormA()" class="bg-slate-200 px-3 py-1.5 rounded font-semibold">Batal</button>
+                    <button type="submit" class="bg-blue-600 text-white px-3 py-1.5 rounded font-bold">Simpan Form A</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= MODAL INPUT KASUS B.1 & B.3 ================= -->
+    <div id="modalLaporan" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div class="bg-white rounded-xl max-w-3xl w-full p-6 shadow-xl text-xs max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="font-bold text-sm text-slate-800 uppercase" id="modalTitle"><i class="fa-solid fa-file-lines text-purple-600 mr-1"></i> Form Input Laporan Dugaan Pelanggaran</h3>
+                <button type="button" onclick="closeModalLaporan()" class="text-slate-400 hover:text-slate-600 text-sm"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="submitLaporanPelanggaran(event)" class="space-y-4">
+                <input type="hidden" id="editKasusId">
+                <div class="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                    <label class="block font-bold text-amber-900 uppercase mb-1">Nomor Formulir / No. Laporan <span class="text-rose-600">*</span></label>
+                    <input type="text" id="customNoLaporan" required placeholder="Contoh: 01/LP/PL/KAB/01.01/IV/2026" class="w-full border rounded p-2 bg-white">
+                </div>
+                <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
+                    <h4 class="font-bold text-emerald-900 uppercase mb-2">Metadata Penerima Laporan</h4>
+                    <input type="text" id="penerimaLaporan" required placeholder="Nama Staf Penerima Laporan" value="Muhammad Ramadhan" class="w-full border rounded p-2 bg-white">
+                </div>
+                <div class="bg-slate-50 p-3 rounded-lg border">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-bold text-slate-700 uppercase">1. Identitas Pelapor</h4>
+                        <button type="button" onclick="tambahPelapor()" class="bg-emerald-600 text-white px-2.5 py-1 rounded text-[11px] font-semibold"><i class="fa-solid fa-plus"></i> Tambah Pelapor</button>
+                    </div>
+                    <div id="pelaporContainer" class="space-y-3"></div>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-lg border">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-bold text-slate-700 uppercase">2. Identitas Terlapor</h4>
+                        <button type="button" onclick="tambahTerlapor()" class="bg-emerald-600 text-white px-2.5 py-1 rounded text-[11px] font-semibold"><i class="fa-solid fa-plus"></i> Tambah Terlapor</button>
+                    </div>
+                    <div id="terlaporContainer" class="space-y-3"></div>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-lg border">
+                    <h4 class="font-bold text-slate-700 uppercase mb-2">3. Peristiwa yang Dilaporkan</h4>
+                    <div class="space-y-2">
+                        <input type="text" id="evPeristiwa" required placeholder="Peristiwa (Bentuk dugaan pelanggaran)" class="w-full border rounded p-2">
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="text" id="evTempat" required placeholder="Tempat Kejadian" class="border rounded p-2">
+                            <input type="text" id="evTglKejadian" required placeholder="Hari & Tanggal Kejadian" class="border rounded p-2">
+                            <input type="text" id="evTglDiketahui" required placeholder="Hari & Tanggal Diketahui" class="border rounded p-2">
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-lg border">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-bold text-slate-700 uppercase">4. Saksi – Saksi</h4>
+                        <button type="button" onclick="tambahSaksi()" class="bg-emerald-600 text-white px-2.5 py-1 rounded text-[11px] font-semibold"><i class="fa-solid fa-plus"></i> Tambah Saksi</button>
+                    </div>
+                    <div id="saksiContainer" class="space-y-3"></div>
+                </div>
+                <div>
+                    <label class="block font-semibold uppercase text-slate-600 mb-1">Bukti - Bukti</label>
+                    <textarea id="evBukti" rows="2" placeholder="Daftar bukti yang dilampirkan..." class="w-full border rounded p-2"></textarea>
+                </div>
+                <div>
+                    <label class="block font-semibold uppercase text-slate-600 mb-1">Uraian Kejadian Secara Lengkap</label>
+                    <textarea id="evUraian" rows="5" required placeholder="Uraian kronologis kejadian secara detail..." class="w-full border rounded p-2"></textarea>
+                </div>
+                <div class="flex justify-end space-x-2 pt-2 border-t">
+                    <button type="button" onclick="closeModalLaporan()" class="bg-slate-200 px-3 py-1.5 rounded font-semibold">Batal</button>
+                    <button type="submit" class="bg-purple-600 text-white px-3 py-1.5 rounded font-bold">Simpan Laporan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= SCRIPT UTAMA ================= -->
+    <script>
+        let currentUser = null;
+        let cachedKasus = [];
+        let cachedFormA = [];
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('loginUser').value;
+            const p = document.getElementById('loginPass').value;
+            document.getElementById('btnLogin').innerText = 'Memverifikasi...';
+
+            google.script.run.withSuccessHandler(res => {
+                if (res.success) {
+                    currentUser = res;
+                    document.getElementById('loginPage').classList.add('hidden');
+                    document.getElementById('appContainer').classList.remove('hidden');
+                    document.getElementById('userSessionInfo').innerText = `${currentUser.nama} (${currentUser.unit}) - Role: ${currentUser.role.toUpperCase()}`;
+                    loadDataAll();
+                } else {
+                    alert(res.message);
+                    document.getElementById('btnLogin').innerText = 'Masuk Aplikasi';
+                }
+            }).authenticateUser(u, p);
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('appContainer').classList.add('hidden');
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('loginUser').value = '';
+            document.getElementById('loginPass').value = '';
+        }
+
+        function switchTab(tab) {
+            if (tab === 'formA') {
+                document.getElementById('viewFormA').classList.remove('hidden');
+                document.getElementById('viewKasus').classList.add('hidden');
+                document.getElementById('tabBtnFormA').className = "px-3 py-1.5 font-bold rounded-md bg-white text-emerald-900 shadow";
+                document.getElementById('tabBtnKasus').className = "px-3 py-1.5 font-semibold rounded-md text-emerald-200 hover:text-white";
+            } else {
+                document.getElementById('viewFormA').classList.add('hidden');
+                document.getElementById('viewKasus').classList.remove('hidden');
+                document.getElementById('tabBtnFormA').className = "px-3 py-1.5 font-semibold rounded-md text-emerald-200 hover:text-white";
+                document.getElementById('tabBtnKasus').className = "px-3 py-1.5 font-bold rounded-md bg-white text-emerald-900 shadow";
+            }
+        }
+
+        function loadDataAll() {
+            google.script.run.withSuccessHandler(renderKasus).getCases();
+            google.script.run.withSuccessHandler(renderFormA).getFormA();
+        }
+
+        // --- SCRIPT FORM A & SLA TEMUAN ---
+        function renderFormA(data) {
+            cachedFormA = data;
+            const tbody = document.getElementById('tableFormA');
+            tbody.innerHTML = '';
+            data.forEach(item => {
+                let badgeSLA = `<span class="px-2.5 py-1 rounded-full text-xs font-bold border ${item.warningClass}">
+                    <i class="fa-solid fa-clock"></i> ${item.kuadran} (${item.sisa_hari} Hari)
+                </span>`;
+                
+                let linkFile = (item.file_url && item.file_url !== '#') 
+                    ? `<a href="${item.file_url}" target="_blank" class="inline-block mt-1 text-blue-600 hover:text-blue-800 font-semibold text-[11px]"><i class="fa-solid fa-link"></i> Bukti Fisik</a>` 
+                    : '';
+
+                let actionBtns = `
+                    <div class="flex justify-center gap-1">
+                        <button onclick="editFormA('${item.id}')" class="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1 rounded font-semibold transition" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="hapusFormA('${item.id}')" class="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded font-semibold transition" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                    </div>`;
+
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-slate-50">
+                        <td class="p-3 font-bold">${item.no_form_a}<br><span class="text-slate-400 font-normal">${item.tanggal}</span></td>
+                        <td class="p-3 font-semibold">${item.pengawas}<br><span class="text-slate-400 font-normal text-[10px]">Oleh: ${item.pembuat}</span></td>
+                        <td class="p-3"><span class="font-bold text-emerald-800">${item.tahapan}</span><br>${item.uraian_pengawasan}<br>${linkFile}</td>
+                        <td class="p-3 text-center">${badgeSLA}</td>
+                        <td class="p-3 text-center">${actionBtns}</td>
+                    </tr>`;
+            });
+        }
+
+        function openModalFormA(mode = 'add') {
+            document.getElementById('modalFormA').classList.remove('hidden');
+            if(mode === 'add') {
+                document.getElementById('titleModalFormA').innerHTML = '<i class="fa-solid fa-clipboard-check text-blue-600 mr-1"></i> Input Hasil Pengawasan (Form A)';
+                document.getElementById('editFormAId').value = '';
+                document.getElementById('faNomor').value = '';
+                document.getElementById('faTanggal').value = '';
+                document.getElementById('faPengawas').value = '';
+                document.getElementById('faTahapan').value = '';
+                document.getElementById('faUraian').value = '';
+                document.getElementById('faDugaan').value = 'Tidak Ada';
+                document.getElementById('faUrl').value = '';
+            }
+        }
+
+        function closeModalFormA() { 
+            document.getElementById('modalFormA').classList.add('hidden'); 
+        }
+
+        function editFormA(id) {
+            const item = cachedFormA.find(d => d.id === id);
+            if(!item) return;
+            openModalFormA('edit');
+            document.getElementById('titleModalFormA').innerText = "Edit Form A: " + item.no_form_a;
+            document.getElementById('editFormAId').value = item.id;
+            document.getElementById('faNomor').value = item.no_form_a;
+            let dateVal = "";
+            if (item.tanggal) {
+                try { dateVal = new Date(item.tanggal).toISOString().split('T')[0]; } 
+                catch(e) { dateVal = item.tanggal; }
+            }
+            document.getElementById('faTanggal').value = dateVal;
+            document.getElementById('faPengawas').value = item.pengawas;
+            document.getElementById('faTahapan').value = item.tahapan;
+            document.getElementById('faUraian').value = item.uraian_pengawasan;
+            document.getElementById('faDugaan').value = item.ada_dugaan;
+            document.getElementById('faUrl').value = item.file_url !== '#' ? item.file_url : '';
+        }
+
+        function submitFormA(e) {
+            e.preventDefault();
+            const id = document.getElementById('editFormAId').value;
+            const data = {
+                id: id,
+                no_form_a: document.getElementById('faNomor').value,
+                tanggal: document.getElementById('faTanggal').value,
+                pengawas: document.getElementById('faPengawas').value,
+                tahapan: document.getElementById('faTahapan').value,
+                uraian: document.getElementById('faUraian').value,
+                ada_dugaan: document.getElementById('faDugaan').value,
+                file_url: document.getElementById('faUrl').value || '#',
+                pembuat: currentUser.nama
+            };
+
+            if(id) {
+                google.script.run.withSuccessHandler(res => { alert(res); closeModalFormA(); loadDataAll(); }).updateFormA(data);
+            } else {
+                google.script.run.withSuccessHandler(res => { alert(res); closeModalFormA(); loadDataAll(); }).addFormA(data);
+            }
+        }
+
+        function hapusFormA(id) {
+            if(confirm("Yakin ingin menghapus data Form A ini?")) {
+                google.script.run.withSuccessHandler(res => { alert(res); loadDataAll(); }).deleteFormA(id);
+            }
+        }
+
+        // --- SCRIPT KASUS B.1 & B.3 DENGAN EARLY WARNING KAJIAN AWAL & SLA ---
+        function renderKasus(data) {
+            cachedKasus = data;
+            const tbody = document.getElementById('tableKasus');
+            tbody.innerHTML = '';
+            
+            document.getElementById('statAman').innerText = data.filter(d => d.kuadran.includes('Aman')).length;
+            document.getElementById('statSiaga').innerText = data.filter(d => d.kuadran.includes('Siaga')).length;
+            document.getElementById('statWaspada').innerText = data.filter(d => d.kuadran.includes('Kajian') || d.kuadran.includes('Waspada')).length;
+            document.getElementById('statBahaya').innerText = data.filter(d => d.kuadran.includes('Bahaya')).length;
+
+            data.forEach(item => {
+                let badgeSLA = `<span class="px-2.5 py-1 rounded-full text-xs font-bold border ${item.warningClass}">
+                    <i class="fa-solid fa-clock"></i> ${item.kuadran} (${item.sisa_hari} Hari)
+                </span>`;
+
+                let actionBtns = `
+                    <div class="flex justify-center gap-1">
+                        <button onclick="downloadFormB1('${item.id}')" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded font-semibold transition" title="Download Word B.1 & B.3"><i class="fa-solid fa-file-word"></i></button>
+                        <button onclick="editLaporan('${item.id}')" class="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1 rounded font-semibold transition" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="hapusKasus('${item.id}')" class="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded font-semibold transition" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                    </div>`;
+
+                let pelaporUtama = '-';
+                try {
+                    let pList = JSON.parse(item.nama_pelapor);
+                    pelaporUtama = pList[0]?.nama || '-';
+                    if(pList.length > 1) pelaporUtama += ` (+${pList.length - 1} lainnya)`;
+                } catch(e) { pelaporUtama = item.nama_pelapor || '-'; }
+
+                let terlaporUtama = '-';
+                try {
+                    let tList = JSON.parse(item.nama_terlapor);
+                    terlaporUtama = tList[0]?.nama || '-';
+                    if(tList.length > 1) terlaporUtama += ` (+${tList.length - 1} lainnya)`;
+                } catch(e) { terlaporUtama = item.nama_terlapor || '-'; }
+
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-slate-50">
+                        <td class="p-3 font-bold">${item.id}<br><span class="text-slate-400 font-normal">${item.tanggal_masuk}</span></td>
+                        <td class="p-3">${item.sumber}<br><span class="text-emerald-700 font-semibold">${pelaporUtama}</span></td>
+                        <td class="p-3 font-semibold text-slate-800">${terlaporUtama}</td>
+                        <td class="p-3">${item.uraian}</td>
+                        <td class="p-3 text-center">${badgeSLA}</td>
+                        <td class="p-3 text-center">${actionBtns}</td>
+                    </tr>`;
+            });
+        }
+
+        function tambahPelapor(data = null) {
+            const container = document.getElementById('pelaporContainer');
+            const div = document.createElement('div');
+            div.className = 'pelapor-item bg-white p-3 rounded border relative grid grid-cols-2 gap-2 mt-2';
+            div.innerHTML = `
+                <input type="text" required placeholder="Nama Lengkap Pelapor" value="${data?.nama || ''}" class="border rounded p-2 pelapor-nama">
+                <input type="text" required placeholder="Tempat/Tgl Lahir" value="${data?.ttl || ''}" class="border rounded p-2 pelapor-ttl">
+                <input type="text" required placeholder="Jenis Kelamin" value="${data?.jk || ''}" class="border rounded p-2 pelapor-jk">
+                <input type="text" required placeholder="Pekerjaan" value="${data?.pekerjaan || ''}" class="border rounded p-2 pelapor-pekerjaan">
+                <input type="text" required placeholder="Kewarganegaraan" value="${data?.wn || 'Indonesia'}" class="border rounded p-2 pelapor-wn">
+                <input type="text" required placeholder="No. Telp/HP" value="${data?.hp || ''}" class="border rounded p-2 pelapor-hp">
+                <input type="text" required placeholder="Alamat Lengkap" value="${data?.alamat || ''}" class="col-span-2 border rounded p-2 pelapor-alamat">
+                <div class="col-span-2 flex gap-2">
+                    <input type="email" required placeholder="E-Mail" value="${data?.email || ''}" class="border rounded p-2 flex-1 pelapor-email">
+                    <button type="button" onclick="this.parentElement.parentElement.remove()" class="bg-rose-500 text-white px-2 rounded"><i class="fa-solid fa-trash"></i></button>
+                </div>`;
+            container.appendChild(div);
+        }
+
+        function tambahTerlapor(data = null) {
+            const container = document.getElementById('terlaporContainer');
+            const div = document.createElement('div');
+            div.className = 'terlapor-item bg-white p-3 rounded border grid grid-cols-2 gap-2 mt-2';
+            div.innerHTML = `
+                <input type="text" required placeholder="Nama Terlapor" value="${data?.nama || ''}" class="border rounded p-2 terlapor-nama">
+                <input type="text" placeholder="No. Telp / HP Terlapor" value="${data?.hp || ''}" class="border rounded p-2 terlapor-hp">
+                <div class="col-span-2 flex gap-2">
+                    <input type="text" required placeholder="Alamat Terlapor" value="${data?.alamat || ''}" class="border rounded p-2 flex-1 terlapor-alamat">
+                    <button type="button" onclick="this.parentElement.parentElement.remove()" class="bg-rose-500 text-white px-2 rounded"><i class="fa-solid fa-trash"></i></button>
+                </div>`;
+            container.appendChild(div);
+        }
+
+        function tambahSaksi(data = null) {
+            const container = document.getElementById('saksiContainer');
+            const div = document.createElement('div');
+            div.className = 'saksi-item bg-white p-3 rounded border grid grid-cols-2 gap-2 mt-2';
+            div.innerHTML = `
+                <input type="text" placeholder="Nama Lengkap Saksi" value="${data?.nama || ''}" class="border rounded p-2 saksi-nama">
+                <input type="text" placeholder="No. Telp / HP Saksi" value="${data?.hp || ''}" class="border rounded p-2 saksi-hp">
+                <div class="col-span-2 flex gap-2">
+                    <input type="text" placeholder="Alamat Lengkap Saksi" value="${data?.alamat || ''}" class="border rounded p-2 flex-1 saksi-alamat">
+                    <button type="button" onclick="this.parentElement.parentElement.remove()" class="bg-rose-500 text-white px-2 rounded"><i class="fa-solid fa-trash"></i></button>
+                </div>`;
+            container.appendChild(div);
+        }
+
+        function openModalLaporan(mode) {
+            document.getElementById('modalLaporan').classList.remove('hidden');
+            if(mode === 'add') {
+                document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-file-lines text-purple-600 mr-1"></i> Form Input Laporan Dugaan Pelanggaran';
+                document.getElementById('editKasusId').value = '';
+                document.getElementById('customNoLaporan').value = '';
+                document.getElementById('pelaporContainer').innerHTML = '';
+                document.getElementById('terlaporContainer').innerHTML = '';
+                document.getElementById('saksiContainer').innerHTML = '';
+                tambahPelapor();
+                tambahTerlapor();
+                tambahSaksi();
+            }
+        }
+
+        function closeModalLaporan() { 
+            document.getElementById('modalLaporan').classList.add('hidden'); 
+        }
+
+        function editLaporan(id) {
+            const item = cachedKasus.find(d => d.id === id);
+            if(!item) return;
+
+            openModalLaporan('edit');
+            document.getElementById('modalTitle').innerText = "Edit Laporan Dugaan Pelanggaran: " + item.id;
+            document.getElementById('editKasusId').value = item.id;
+            document.getElementById('customNoLaporan').value = item.id;
+            document.getElementById('penerimaLaporan').value = item.penerima_laporan || 'Muhammad Ramadhan';
+            document.getElementById('evPeristiwa').value = item.peristiwa || '';
+            document.getElementById('evTempat').value = item.tempat_kejadian || '';
+            document.getElementById('evTglKejadian').value = item.tgl_kejadian || '';
+            document.getElementById('evTglDiketahui').value = item.tgl_diketahui || '';
+            document.getElementById('evBukti').value = item.bukti || '';
+            document.getElementById('evUraian').value = item.uraian || '';
+
+            document.getElementById('pelaporContainer').innerHTML = '';
+            try { JSON.parse(item.nama_pelapor).forEach(p => tambahPelapor(p)); } catch(e) { tambahPelapor(); }
+            document.getElementById('terlaporContainer').innerHTML = '';
+            try { JSON.parse(item.nama_terlapor).forEach(t => tambahTerlapor(t)); } catch(e) { tambahTerlapor(); }
+            document.getElementById('saksiContainer').innerHTML = '';
+            try {
+                let sList = JSON.parse(item.saksi);
+                if(sList.length > 0) sList.forEach(s => tambahSaksi(s)); else tambahSaksi();
+            } catch(e) { tambahSaksi(); }
+        }
+
+        function submitLaporanPelanggaran(e) {
+            e.preventDefault();
+            const editId = document.getElementById('editKasusId').value;
+            const customId = document.getElementById('customNoLaporan').value;
+
+            let pelaporList = [];
+            document.querySelectorAll('.pelapor-item').forEach(el => {
+                pelaporList.push({
+                    nama: el.querySelector('.pelapor-nama').value,
+                    ttl: el.querySelector('.pelapor-ttl').value,
+                    jk: el.querySelector('.pelapor-jk').value,
+                    pekerjaan: el.querySelector('.pelapor-pekerjaan').value,
+                    wn: el.querySelector('.pelapor-wn').value,
+                    alamat: el.querySelector('.pelapor-alamat').value,
+                    hp: el.querySelector('.pelapor-hp').value,
+                    email: el.querySelector('.pelapor-email').value
+                });
+            });
+
+            let terlaporList = [];
+            document.querySelectorAll('.terlapor-item').forEach(el => {
+                terlaporList.push({
+                    nama: el.querySelector('.terlapor-nama').value,
+                    alamat: el.querySelector('.terlapor-alamat').value,
+                    hp: el.querySelector('.terlapor-hp').value || '-'
+                });
+            });
+
+            let saksiList = [];
+            document.querySelectorAll('.saksi-item').forEach(el => {
+                let nama = el.querySelector('.saksi-nama').value;
+                if(nama) {
+                    saksiList.push({
+                        nama: nama,
+                        alamat: el.querySelector('.saksi-alamat').value || '-',
+                        hp: el.querySelector('.saksi-hp').value || '-'
+                    });
+                }
+            });
+
+            const data = {
+                id: customId,
+                old_id: editId,
+                penerima_laporan: document.getElementById('penerimaLaporan').value,
+                nama_pelapor: JSON.stringify(pelaporList),
+                nama_terlapor: JSON.stringify(terlaporList),
+                peristiwa: document.getElementById('evPeristiwa').value,
+                tempat_kejadian: document.getElementById('evTempat').value,
+                tgl_kejadian: document.getElementById('evTglKejadian').value,
+                tgl_diketahui: document.getElementById('evTglDiketahui').value,
+                saksi: JSON.stringify(saksiList),
+                bukti: document.getElementById('evBukti').value,
+                uraian: document.getElementById('evUraian').value,
+                pembuat: currentUser.nama
+            };
+
+            if(editId) {
+                google.script.run.withSuccessHandler(res => { alert(res); closeModalLaporan(); loadDataAll(); }).updateLaporanPelanggaran(data);
+            } else {
+                google.script.run.withSuccessHandler(res => { alert(res); closeModalLaporan(); loadDataAll(); }).addLaporanPelanggaran(data);
+            }
+        }
+
+        function hapusKasus(id) {
+            if(confirm("Apakah Anda yakin ingin menghapus data laporan ini?")) {
+                google.script.run.withSuccessHandler(res => { alert(res); loadDataAll(); }).deleteKasus(id);
+            }
+        }
+
+        function downloadFormB1(id) {
+            alert("Menyiapkan dokumen unduhan Formulir B.1 & B.3...");
+            google.script.run.withSuccessHandler(function(res) {
+                if (res.success) {
+                    const a = document.createElement('a');
+                    a.href = res.downloadUrl;
+                    a.download = res.fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                } else {
+                    alert("Gagal mengunduh: " + res.message);
+                }
+            }).generateFormB1DirectUrl(id);
+        }
+    </script>
+</body>
+</html>

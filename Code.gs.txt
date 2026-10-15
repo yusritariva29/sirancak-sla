@@ -1,0 +1,326 @@
+// ==========================================
+// FILE: Code.gs (SI-RANCAK BACKEND)
+// ==========================================
+
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('Index')
+      .setTitle('SI-RANCAK - Sistem Informasi Rekapitulasi & Catatan Kasus P3SPH')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+function authenticateUser(username, password) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Users');
+  if (!sheet) return { success: false, message: "Database User belum disiapkan!" };
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] == username && data[i][1] == password) {
+      return { success: true, username: data[i][0], role: data[i][2], nama: data[i][3], unit: data[i][4] };
+    }
+  }
+  return { success: false, message: "Username atau Password salah!" };
+}
+
+// ================= FITUR FORM A & EARLY WARNING TEMUAN =================
+function getFormA() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('FormA');
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  var list = [];
+  
+  for (var i = 1; i < data.length; i++) {
+    var tglFormA = data[i][1];
+    var adaDugaan = data[i][6]; // "Ada" atau "Tidak Ada"
+    var sisaHari = 0;
+    var kuadran = "Aman";
+    var warningClass = "bg-emerald-100 text-emerald-800 border-emerald-300";
+
+    // Jika ada dugaan, hitung SLA penetapan Temuan max 7 hari kerja sejak Form A dibuat
+    if (tglFormA && adaDugaan === 'Ada') {
+      sisaHari = hitungSisaHariKerjaCustom(new Date(tglFormA), 7);
+      if (sisaHari >= 3) {
+        kuadran = "Aman (Penetapan Temuan)";
+        warningClass = "bg-emerald-100 text-emerald-800 border-emerald-300";
+      } else if (sisaHari === 2) {
+        kuadran = "Waspada Penetapan";
+        warningClass = "bg-amber-100 text-amber-800 border-amber-300";
+      } else if (sisaHari === 1) {
+        kuadran = "Siaga Penetapan";
+        warningClass = "bg-blue-100 text-blue-800 border-blue-300";
+      } else {
+        kuadran = "Bahaya / Batas 7 Hari Lewat";
+        warningClass = "bg-rose-100 text-rose-800 border-rose-300 animate-pulse";
+      }
+    } else {
+      kuadran = "Pengawasan Normal";
+      warningClass = "bg-slate-100 text-slate-700 border-slate-300";
+    }
+
+    list.push({
+      id: data[i][0],
+      tanggal: tglFormA ? Utilities.formatDate(new Date(tglFormA), Session.getScriptTimeZone(), "yyyy-MM-dd") : "",
+      no_form_a: data[i][2],
+      pengawas: data[i][3],
+      tahapan: data[i][4],
+      uraian_pengawasan: data[i][5],
+      ada_dugaan: adaDugaan,
+      file_url: data[i][7] || "#",
+      pembuat: data[i][8] || "-",
+      sisa_hari: sisaHari,
+      kuadran: kuadran,
+      warningClass: warningClass
+    });
+  }
+  return list;
+}
+
+function addFormA(form) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('FormA');
+  if(!sheet) return "Error: Sheet 'FormA' tidak ditemukan!";
+  var id = 'FMA-' + new Date().getTime();
+  sheet.appendRow([id, form.tanggal, form.no_form_a, form.pengawas, form.tahapan, form.uraian, form.ada_dugaan, form.file_url, form.pembuat]);
+  return "Form A berhasil diregistrasi!";
+}
+
+function updateFormA(form) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('FormA');
+  if(!sheet) return "Error: Sheet 'FormA' tidak ditemukan!";
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] == form.id) {
+      sheet.getRange(i + 1, 2).setValue(form.tanggal);
+      sheet.getRange(i + 1, 3).setValue(form.no_form_a);
+      sheet.getRange(i + 1, 4).setValue(form.pengawas);
+      sheet.getRange(i + 1, 5).setValue(form.tahapan);
+      sheet.getRange(i + 1, 6).setValue(form.uraian);
+      sheet.getRange(i + 1, 7).setValue(form.ada_dugaan);
+      sheet.getRange(i + 1, 8).setValue(form.file_url);
+      return "Form A berhasil diperbarui!";
+    }
+  }
+  return "Data Form A tidak ditemukan!";
+}
+
+function deleteFormA(id) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('FormA');
+  if(!sheet) return "Error: Sheet 'FormA' tidak ditemukan!";
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] == id) {
+      sheet.deleteRow(i + 1);
+      return "Form A berhasil dihapus!";
+    }
+  }
+  return "Data Form A tidak ditemukan!";
+}
+
+// ================= FITUR KASUS, KAJIAN AWAL (2 HARI) & SLA LAPORAN (7 HARI) =================
+function getCases() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Kasus');
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  var cases = [];
+  for (var i = 1; i < data.length; i++) {
+    var tglMasuk = data[i][1];
+    var status = data[i][15] || 'Proses';
+    var sisaHari = 0;
+    var kuadran = "Aman";
+    var warningClass = "bg-emerald-100 text-emerald-800 border-emerald-300";
+
+    if (tglMasuk && status === 'Proses') {
+      // SLA Penanganan Laporan total 7 hari kerja
+      sisaHari = hitungSisaHariKerjaCustom(new Date(tglMasuk), 7);
+      
+      // Early Warning Kajian Awal (Paling lama 2 hari kerja)
+      var sisaHariKajian = hitungSisaHariKerjaCustom(new Date(tglMasuk), 2);
+
+      if (sisaHariKajian <= 0 && sisaHari > 0) {
+        kuadran = "Perhatian: Deadline Kajian Awal (2 Hari)";
+        warningClass = "bg-amber-100 text-amber-800 border-amber-300";
+      } else if (sisaHari >= 4) {
+        kuadran = "Aman (Penyusunan Kajian)";
+        warningClass = "bg-emerald-100 text-emerald-800 border-emerald-300";
+      } else if (sisaHari === 3) {
+        kuadran = "Siaga Penanganan";
+        warningClass = "bg-blue-100 text-blue-800 border-blue-300";
+      } else if (sisaHari === 2) {
+        kuadran = "Waspada Batas Waktu";
+        warningClass = "bg-amber-100 text-amber-800 border-amber-300";
+      } else {
+        kuadran = "Bahaya / SLA 7 Hari Lewat";
+        warningClass = "bg-rose-100 text-rose-800 border-rose-300 animate-pulse";
+      }
+    } else if (status === 'Selesai') {
+      kuadran = "Selesai";
+      warningClass = "bg-slate-100 text-slate-700 border-slate-300";
+    }
+
+    cases.push({
+      id: data[i][0],
+      tanggal_masuk: tglMasuk ? Utilities.formatDate(new Date(tglMasuk), Session.getScriptTimeZone(), "yyyy-MM-dd") : "",
+      sumber: data[i][2],
+      referensi_no: data[i][3] || "-",
+      nama_pelapor: data[i][3],
+      nama_terlapor: data[i][4],
+      peristiwa: data[i][5],
+      tempat_kejadian: data[i][6],
+      tgl_kejadian: data[i][7],
+      tgl_diketahui: data[i][8],
+      saksi: data[i][9],
+      bukti: data[i][10],
+      uraian: data[i][11],
+      penerima_laporan: data[i][12] || "Muhammad Ramadhan",
+      status: status,
+      tindak_lanjut: data[i][16],
+      sisa_hari: sisaHari,
+      kuadran: kuadran,
+      warningClass: warningClass
+    });
+  }
+  return cases;
+}
+
+function addLaporanPelanggaran(form) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Kasus');
+  var tanggal = new Date().toISOString().slice(0, 10);
+  var initialLog = "[" + new Date().toLocaleString() + "] Laporan Model B.1 & B.3 dicatat oleh " + form.pembuat;
+  
+  sheet.appendRow([
+    form.id, tanggal, "Laporan Dugaan Pelanggaran", 
+    form.nama_pelapor, form.nama_terlapor, 
+    form.peristiwa, form.tempat_kejadian, form.tgl_kejadian, form.tgl_diketahui, 
+    form.saksi, form.bukti, form.uraian, 
+    form.penerima_laporan, "Proses", "Penerimaan Laporan Model B.1 & B.3", initialLog, ""
+  ]);
+  return "Laporan Dugaan Pelanggaran berhasil diregistrasi!";
+}
+
+function updateLaporanPelanggaran(form) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Kasus');
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] == form.old_id) {
+      sheet.getRange(i + 1, 1).setValue(form.id); 
+      sheet.getRange(i + 1, 4).setValue(form.nama_pelapor);
+      sheet.getRange(i + 1, 5).setValue(form.nama_terlapor);
+      sheet.getRange(i + 1, 6).setValue(form.peristiwa);
+      sheet.getRange(i + 1, 7).setValue(form.tempat_kejadian);
+      sheet.getRange(i + 1, 8).setValue(form.tgl_kejadian);
+      sheet.getRange(i + 1, 9).setValue(form.tgl_diketahui);
+      sheet.getRange(i + 1, 10).setValue(form.saksi);
+      sheet.getRange(i + 1, 11).setValue(form.bukti);
+      sheet.getRange(i + 1, 12).setValue(form.uraian);
+      sheet.getRange(i + 1, 13).setValue(form.penerima_laporan);
+      return "Data Laporan berhasil diperbarui!";
+    }
+  }
+  return "Data tidak ditemukan!";
+}
+
+function deleteKasus(id) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Kasus');
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] == id) {
+      sheet.deleteRow(i + 1);
+      return "Data berhasil dihapus!";
+    }
+  }
+  return "Data tidak ditemukan!";
+}
+
+function generateFormB1DirectUrl(idKasus) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Kasus');
+  var data = sheet.getDataRange().getValues();
+  var rowData = null;
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] == idKasus) {
+      rowData = data[i];
+      break;
+    }
+  }
+  if (!rowData) return { success: false, message: "Data tidak ditemukan!" };
+  
+  var templateId = "1dGCgBIQw4aUmbIsrnBaT_XJZ_6a682O0oWAVYkj4bD0";
+  var copyFile = DriveApp.getFileById(templateId).makeCopy("Form_B1_B3_" + idKasus);
+  var copyDocId = copyFile.getId();
+  var doc = DocumentApp.openById(copyDocId);
+  var body = doc.getBody();
+  
+  var noLaporan = rowData[0];
+  var now = new Date();
+  var hariArray = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+  var namaHari = hariArray[now.getDay()];
+  var tanggalCetak = Utilities.formatDate(now, Session.getScriptTimeZone(), "dd-MM-yyyy");
+  var waktuCetak = Utilities.formatDate(now, Session.getScriptTimeZone(), "HH:mm") + " WIB";
+  var hariTanggalWaktuStr = namaHari + ", " + tanggalCetak;
+
+  var pNama = "-", pTtl = "-", pJk = "-", pPekerjaan = "-", pWn = "Indonesia", pAlamat = "-", pHp = "-", pEmail = "-";
+  try { var pList = JSON.parse(rowData[3]); if(pList.length > 0) { pNama = pList[0].nama || "-"; pTtl = pList[0].ttl || "-"; pJk = pList[0].jk || "-"; pPekerjaan = pList[0].pekerjaan || "-"; pWn = pList[0].wn || "Indonesia"; pAlamat = pList[0].alamat || "-"; pHp = pList[0].hp || "-"; pEmail = pList[0].email || "-"; } } catch(e) {}
+  var tNama = "-", tAlamat = "-", tHp = "-";
+  try { var tList = JSON.parse(rowData[4]); if(tList.length > 0) { tNama = tList[0].nama || "-"; tAlamat = tList[0].alamat || "-"; tHp = tList[0].hp || "-"; } } catch(e) {}
+  var sNama = "-", sAlamat = "-", sHp = "-";
+  try { var sList = JSON.parse(rowData[9]); if(sList.length > 0) { sNama = sList[0].nama || "-"; sAlamat = sList[0].alamat || "-"; sHp = sList[0].hp || "-"; } } catch(e) {}
+
+  body.replaceText("{{id}}", noLaporan);
+  body.replaceText("{{p_nama}}", pNama);
+  body.replaceText("{{p_ttl}}", pTtl);
+  body.replaceText("{{p_jk}}", pJk);
+  body.replaceText("{{p_pekerjaan}}", pPekerjaan);
+  body.replaceText("{{p_wn}}", pWn);
+  body.replaceText("{{p_alamat}}", pAlamat);
+  body.replaceText("{{p_hp}}", pHp);
+  body.replaceText("{{p_email}}", pEmail);
+  body.replaceText("{{t_nama}}", tNama);
+  body.replaceText("{{t_alamat}}", tAlamat);
+  body.replaceText("{{t_hp}}", tHp);
+  body.replaceText("{{peristiwa}}", rowData[5]);
+  body.replaceText("{{tempat}}", rowData[6]);
+  body.replaceText("{{tgl_kejadian}}", rowData[7]);
+  body.replaceText("{{tgl_diketahui}}", rowData[8]);
+  body.replaceText("{{s_nama}}", sNama);
+  body.replaceText("{{s_alamat}}", sAlamat);
+  body.replaceText("{{s_hp}}", sHp);
+  body.replaceText("{{bukti}}", rowData[10] || "-");
+  body.replaceText("{{uraian}}", rowData[11] || "-");
+  body.replaceText("{{tanggal}}", hariTanggalWaktuStr);
+  body.replaceText("{{waktu}}", waktuCetak);
+  body.replaceText("{{penerima}}", rowData[12] || "Muhammad Ramadhan");
+  body.replaceText("{{nama_pelapor_ttd}}", pNama);
+  
+  doc.saveAndClose();
+  var file = DriveApp.getFileById(copyDocId);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  
+  return {
+    success: true,
+    fileName: "Formulir_B1_B3_" + noLaporan.replace(/[^a-zA-Z0-9]/g, '_') + ".docx",
+    downloadUrl: "https://docs.google.com/document/d/" + copyDocId + "/export?format=docx"
+  };
+}
+
+// Helper Penghitung Hari Kerja Kustom (Lewati Sabtu & Minggu)
+function hitungSisaHariKerjaCustom(startDate, maxDays) {
+  var today = new Date();
+  today.setHours(0,0,0,0);
+  var targetDate = new Date(startDate);
+  targetDate.setHours(0,0,0,0);
+  
+  var hariKerjaLewat = 0;
+  var cursor = new Date(targetDate);
+  while(hariKerjaLewat < maxDays) {
+    cursor.setDate(cursor.getDate() + 1);
+    var day = cursor.getDay();
+    if (day !== 0 && day !== 6) hariKerjaLewat++;
+  }
+  
+  var sisaHariKerja = 0;
+  var tempToday = new Date(today);
+  while(tempToday < cursor) {
+    tempToday.setDate(tempToday.getDate() + 1);
+    var day = tempToday.getDay();
+    if (day !== 0 && day !== 6) sisaHariKerja++;
+  }
+  if (today > cursor) return 0;
+  return sisaHariKerja;
+}

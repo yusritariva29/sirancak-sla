@@ -1,0 +1,128 @@
+<!-- MODAL INPUT FORM A -->
+<div id="modalFormA" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50 overflow-y-auto">
+    <div class="bg-white rounded-xl max-w-2xl w-full p-6 shadow-xl text-xs max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4 border-b pb-2">
+            <h3 class="font-bold text-sm text-slate-800 uppercase" id="titleModalFormA"><i class="fa-solid fa-clipboard-check text-blue-600 mr-1"></i> Input Hasil Pengawasan (Form A)</h3>
+            <button type="button" onclick="closeModalFormA()" class="text-slate-400 hover:text-slate-600 text-sm"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form onsubmit="submitFormA(event)" class="space-y-4">
+            <input type="hidden" id="editFormAId">
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block font-semibold uppercase text-slate-600 mb-1">Nomor Form A <span class="text-rose-600">*</span></label>
+                    <input type="text" id="faNomor" required placeholder="Contoh: 01/LHP/PM/KAB/01.01/IV/2026" class="w-full border rounded p-2 bg-white">
+                </div>
+                <div>
+                    <label class="block font-semibold uppercase text-slate-600 mb-1">Tanggal Pengawasan <span class="text-rose-600">*</span></label>
+                    <input type="date" id="faTanggal" required class="w-full border rounded p-2 bg-white">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block font-semibold uppercase text-slate-600 mb-1">Nama Pengawas <span class="text-rose-600">*</span></label>
+                    <input type="text" id="faPengawas" required placeholder="Nama pelaksana pengawasan" class="w-full border rounded p-2 bg-white">
+                </div>
+                <div>
+                    <label class="block font-semibold uppercase text-slate-600 mb-1">Tahapan yang Diawasi <span class="text-rose-600">*</span></label>
+                    <input type="text" id="faTahapan" required placeholder="Contoh: Pemutakhiran Data Pemilih" class="w-full border rounded p-2 bg-white">
+                </div>
+            </div>
+
+            <div>
+                <label class="block font-semibold uppercase text-slate-600 mb-1">Uraian Hasil Pengawasan <span class="text-rose-600">*</span></label>
+                <textarea id="faUraian" rows="4" required placeholder="Jelaskan proses dan hasil pengawasan..." class="w-full border rounded p-2 bg-white"></textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg border">
+                <div>
+                    <label class="block font-semibold uppercase text-slate-600 mb-1">Dugaan Pelanggaran? <span class="text-rose-600">*</span></label>
+                    <select id="faDugaan" required class="w-full border rounded p-2 bg-white font-semibold text-slate-700">
+                        <option value="Tidak Ada">Tidak Ada Pelanggaran</option>
+                        <option value="Ada">Ada Dugaan Pelanggaran</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-semibold uppercase text-slate-600 mb-1">Link File Form A Fisik (Opsional)</label>
+                    <input type="url" id="faUrl" placeholder="Link Google Drive / PDF..." class="w-full border rounded p-2 bg-white">
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-2 border-t">
+                <button type="button" onclick="closeModalFormA()" class="bg-slate-200 px-3 py-1.5 rounded font-semibold">Batal</button>
+                <button type="submit" class="bg-blue-600 text-white px-3 py-1.5 rounded font-bold">Simpan Form A</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openModalFormA(mode = 'add') {
+        document.getElementById('modalFormA').classList.remove('hidden');
+        if(mode === 'add') {
+            document.getElementById('titleModalFormA').innerHTML = '<i class="fa-solid fa-clipboard-check text-blue-600 mr-1"></i> Input Hasil Pengawasan (Form A)';
+            document.getElementById('editFormAId').value = '';
+            document.getElementById('faNomor').value = '';
+            document.getElementById('faTanggal').value = '';
+            document.getElementById('faPengawas').value = '';
+            document.getElementById('faTahapan').value = '';
+            document.getElementById('faUraian').value = '';
+            document.getElementById('faDugaan').value = 'Tidak Ada';
+            document.getElementById('faUrl').value = '';
+        }
+    }
+
+    function closeModalFormA() { 
+        document.getElementById('modalFormA').classList.add('hidden'); 
+    }
+
+    function editFormA(id) {
+        const item = cachedFormA.find(d => d.id === id);
+        if(!item) return;
+        openModalFormA('edit');
+        document.getElementById('titleModalFormA').innerText = "Edit Form A: " + item.no_form_a;
+        document.getElementById('editFormAId').value = item.id;
+        document.getElementById('faNomor').value = item.no_form_a;
+        
+        let dateVal = "";
+        if (item.tanggal) {
+            try { dateVal = new Date(item.tanggal).toISOString().split('T')[0]; } 
+            catch(e) { dateVal = item.tanggal; }
+        }
+        document.getElementById('faTanggal').value = dateVal;
+        document.getElementById('faPengawas').value = item.pengawas;
+        document.getElementById('faTahapan').value = item.tahapan;
+        document.getElementById('faUraian').value = item.uraian_pengawasan;
+        document.getElementById('faDugaan').value = item.ada_dugaan;
+        document.getElementById('faUrl').value = item.file_url !== '#' ? item.file_url : '';
+    }
+
+    function submitFormA(e) {
+        e.preventDefault();
+        const id = document.getElementById('editFormAId').value;
+        const data = {
+            id: id,
+            no_form_a: document.getElementById('faNomor').value,
+            tanggal: document.getElementById('faTanggal').value,
+            pengawas: document.getElementById('faPengawas').value,
+            tahapan: document.getElementById('faTahapan').value,
+            uraian: document.getElementById('faUraian').value,
+            ada_dugaan: document.getElementById('faDugaan').value,
+            file_url: document.getElementById('faUrl').value || '#',
+            pembuat: currentUser.nama
+        };
+
+        if(id) {
+            google.script.run.withSuccessHandler(res => { alert(res); closeModalFormA(); loadDataAll(); }).updateFormA(data);
+        } else {
+            google.script.run.withSuccessHandler(res => { alert(res); closeModalFormA(); loadDataAll(); }).addFormA(data);
+        }
+    }
+
+    function hapusFormA(id) {
+        if(confirm("Yakin ingin menghapus data Form A ini?")) {
+            google.script.run.withSuccessHandler(res => { alert(res); loadDataAll(); }).deleteFormA(id);
+        }
+    }
+</script>
